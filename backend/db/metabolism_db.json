@@ -1,0 +1,34 @@
+{
+  "enzymes": [
+    {
+      "name": "CYP3A4",
+      "description": "The most abundant cytochrome P450 enzyme in the liver and intestines, responsible for metabolizing over 50% of clinically prescribed medications.",
+      "substrates": ["atorvastatin", "simvastatin", "lovastatin", "sildenafil", "amlodipine", "cyclosporine", "fentanyl", "midazolam", "nifedipine"],
+      "inhibitors": {
+        "strong": ["clarithromycin", "ketoconazole", "itraconazole", "ritonavir", "grapefruit juice", "nefazodone"],
+        "moderate": ["erythromycin", "verapamil", "diltiazem", "fluconazole", "cimetidine"]
+      },
+      "inducers": ["rifampin", "phenytoin", "carbamazepine", "st. john's wort", "phenobarbital"]
+    },
+    {
+      "name": "CYP2D6",
+      "description": "Responsible for the metabolism of about 25% of clinical drugs, especially neuropsychiatric, cardiovascular, and pain medications. Highly subject to genetic polymorphism.",
+      "substrates": ["codeine", "tramadol", "metoprolol", "fluoxetine", "paroxetine", "venlafaxine", "haloperidol", "donepezil"],
+      "inhibitors": {
+        "strong": ["fluoxetine", "paroxetine", "quinidine", "bupropion"],
+        "moderate": ["sertraline", "duloxetine", "amiodarone", "diphenhydramine"]
+      },
+      "inducers": []
+    },
+    {
+      "name": "CYP2C9",
+      "description": "Responsible for the metabolism of many acidic drugs, including oral anticoagulants, NSAIDs, and oral hypoglycemics.",
+      "substrates": ["warfarin", "ibuprofen", "celecoxib", "phenytoin", "losartan", "glipizide"],
+      "inhibitors": {
+        "strong": ["fluconazole", "amiodarone", "sulfamethoxazole"],
+        "moderate": ["metronidazole", "miconazole", "voriconazole"]
+      },
+      "inducers": ["rifampin", "secobarbital"]
+    }
+  ]
+}

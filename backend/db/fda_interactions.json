@@ -1,0 +1,76 @@
+{
+  "interactions": [
+    {
+      "drug1": "aspirin",
+      "drug2": "ibuprofen",
+      "severity": "WARNING",
+      "mechanism": "Pharmacodynamic. Both are NSAIDs (nonsteroidal anti-inflammatory drugs) that inhibit cyclooxygenase (COX-1 and COX-2) enzymes. Ibuprofen can competitively block the binding of low-dose aspirin to the active site of COX-1, potentially reducing Aspirin's cardioprotective antiplatelet effect.",
+      "effects": "Increased risk of gastrointestinal (GI) bleeding and mucosal damage. Also, diminished antiplatelet protection of aspirin if ibuprofen is taken beforehand.",
+      "clinical_management": "Take low-dose aspirin at least 30 minutes to 2 hours before taking ibuprofen, or at least 8 hours after taking ibuprofen, to allow aspirin to irreversibly bind to platelet COX-1. Monitor for signs of GI bleeding (black tarry stools, abdominal pain).",
+      "alternatives": "Acetaminophen (paracetamol) for pain relief, as it does not interfere with aspirin's antiplatelet action or significantly increase bleeding risk when taken at standard doses."
+    },
+    {
+      "drug1": "warfarin",
+      "drug2": "aspirin",
+      "severity": "CRITICAL",
+      "mechanism": "Pharmacodynamic. Additive antiplatelet and anticoagulant effects. Aspirin inhibits platelet aggregation, while warfarin inhibits vitamin K-dependent clotting factors, leading to a dual impairment of the hemostatic pathway.",
+      "effects": "Extremely high risk of major bleeding events, including gastrointestinal hemorrhage, epistaxis, and potentially fatal intracranial bleeding.",
+      "clinical_management": "Avoid concurrent use unless explicitly prescribed by a cardiologist or hematologist (e.g., in mechanical heart valves). If required, monitor International Normalized Ratio (INR) meticulously and adjust warfarin dosing accordingly. Educate patients on bleeding warning signs.",
+      "alternatives": "For pain relief, use Acetaminophen in low doses (under 2g/day) with frequent INR monitoring, as high-dose acetaminophen can also raise INR."
+    },
+    {
+      "drug1": "warfarin",
+      "drug2": "ibuprofen",
+      "severity": "CRITICAL",
+      "mechanism": "Pharmacodynamic and Pharmacokinetic. Ibuprofen impairs platelet aggregation via reversible COX-1 inhibition and causes gastric mucosal damage, increasing bleeding risk in patients anticoagulated by warfarin. Additionally, some NSAIDs can displace warfarin from plasma proteins or slightly inhibit its metabolism via CYP2C9.",
+      "effects": "Extremely high risk of gastrointestinal bleeding and systemic hemorrhaging.",
+      "clinical_management": "Avoid concurrent use. Discontinue NSAID and switch to a safer analgesic. If unavoidable, use for the shortest duration possible, monitor INR closely, and consider co-prescribing a proton pump inhibitor (PPI) like Omeprazole for GI protection.",
+      "alternatives": "Acetaminophen (paracetamol) is the preferred analgesic. Use with caution and monitor INR if taken regularly."
+    },
+    {
+      "drug1": "sildenafil",
+      "drug2": "nitroglycerin",
+      "severity": "CRITICAL",
+      "mechanism": "Pharmacodynamic. Sildenafil inhibits phosphodiesterase type 5 (PDE5), which prevents the breakdown of cyclic guanosine monophosphate (cGMP). Nitroglycerin acts as a nitric oxide donor, stimulating cGMP production. The combination leads to an enormous, uncontrolled accumulation of cGMP, causing massive smooth muscle relaxation and vasodilation.",
+      "effects": "Severe, sudden, and potentially life-threatening hypotension (low blood pressure), which can trigger myocardial infarction (heart attack) or cardiovascular collapse.",
+      "clinical_management": "ABSOLUTELY CONTRAINDICATED. Nitroglycerin or other organic nitrates (e.g., isosorbide mononitrate) should not be administered within 24 hours of sildenafil use (48 hours for tadalafil). If a patient develops chest pain after taking sildenafil, emergency medical personnel must be informed immediately.",
+      "alternatives": "For erectile dysfunction, consult a doctor about non-pharmacological therapies or alternative agents. For angina, utilize non-nitrate antianginal agents such as Ranolazine under medical supervision."
+    },
+    {
+      "drug1": "lisinopril",
+      "drug2": "spironolactone",
+      "severity": "WARNING",
+      "mechanism": "Pharmacodynamic. Lisinopril is an ACE inhibitor that reduces aldosterone secretion, leading to potassium retention. Spironolactone is a potassium-sparing diuretic that directly antagonizes aldosterone in the renal distal tubules, further preventing potassium excretion.",
+      "effects": "High risk of severe hyperkalemia (high blood potassium levels), which can cause cardiac arrhythmias, muscle weakness, and cardiac arrest.",
+      "clinical_management": "Monitor serum potassium levels and renal function (serum creatinine, eGFR) regularly, especially during initiation or dosage titration. Restrict potassium-rich dietary intake and avoid potassium supplements. Limit spironolactone dose (typically ≤ 25mg daily in heart failure when combined with ACE inhibitors).",
+      "alternatives": "Substitute spironolactone with a loop diuretic (e.g., furosemide) or thiazide diuretic (e.g., hydrochlorothiazide) if potassium levels cannot be maintained in a safe range (< 5.0 mEq/L)."
+    },
+    {
+      "drug1": "lisinopril",
+      "drug2": "ibuprofen",
+      "severity": "WARNING",
+      "mechanism": "Pharmacodynamic and Renal. NSAIDs like ibuprofen inhibit renal prostaglandins, which normally dilate the afferent arterioles to maintain glomerular filtration rate (GFR). Lisinopril inhibits angiotensin II, which normally constricts the efferent arteriole. Combining them reduces glomerular perfusion pressure, leading to renal impairment.",
+      "effects": "Significant decrease in the antihypertensive effectiveness of lisinopril. Increased risk of acute kidney injury (AKI), fluid retention, and hyperkalemia.",
+      "clinical_management": "Avoid regular concurrent use, especially in elderly, hypovolemic, or pre-existing renal disease patients. Monitor renal function and blood pressure regularly. Maintain adequate hydration.",
+      "alternatives": "For pain, use Acetaminophen. For hypertension, calcium channel blockers (e.g., Amlodipine) are less impacted by NSAID use than ACE inhibitors."
+    },
+    {
+      "drug1": "atorvastatin",
+      "drug2": "clarithromycin",
+      "severity": "CRITICAL",
+      "mechanism": "Pharmacokinetic. Clarithromycin is a potent inhibitor of the Cytochrome P450 enzyme CYP3A4. Atorvastatin is heavily metabolized by CYP3A4. Concomitant administration decreases atorvastatin clearance, leading to significantly elevated plasma concentrations of the statin.",
+      "effects": "Markedly increased risk of statin-induced toxicities, specifically myopathy (muscle pain) and rhabdomyolysis (skeletal muscle breakdown, which can release myoglobin and cause acute kidney failure).",
+      "clinical_management": "Hold Atorvastatin therapy during the course of Clarithromycin treatment. Alternatively, switch the antibiotic to an agent that does not inhibit CYP3A4 (e.g., Azithromycin or Amoxicillin).",
+      "alternatives": "Use Azithromycin instead of Clarithromycin, or transiently discontinue Atorvastatin for the duration of the 5-10 day antibiotic therapy."
+    },
+    {
+      "drug1": "fluoxetine",
+      "drug2": "phenelzine",
+      "severity": "CRITICAL",
+      "mechanism": "Pharmacodynamic. Fluoxetine is a Selective Serotonin Reuptake Inhibitor (SSRI) that increases synaptic serotonin. Phenelzine is a Monoamine Oxidase Inhibitor (MAOI) that prevents the breakdown of serotonin. Combining them causes a massive, dangerous accumulation of serotonin in the central nervous system.",
+      "effects": "Serotonin Syndrome, a life-threatening condition characterized by cognitive changes (confusion, agitation), autonomic instability (severe hyperthermia, tachycardia, labile blood pressure), and neuromuscular abnormalities (hyperreflexia, clonus, tremors).",
+      "clinical_management": "ABSOLUTELY CONTRAINDICATED. A washout period is mandatory when switching between these drug classes. Due to fluoxetine's long half-life, wait at least 5 weeks after discontinuing Fluoxetine before starting Phenelzine. Wait at least 14 days after discontinuing Phenelzine before starting Fluoxetine.",
+      "alternatives": "Do not combine. Manage depression with monotherapy or combine SSRIs/MAOIs with non-serotonergic agents under strict psychiatric care."
+    }
+  ]
+}

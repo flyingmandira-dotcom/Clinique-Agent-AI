@@ -1,0 +1,58 @@
+{
+  "contraindications": [
+    {
+      "drug": "ibuprofen",
+      "disease": "renal impairment",
+      "severity": "CRITICAL",
+      "mechanism": "NSAIDs inhibit renal prostaglandins (PGE2 and PGI2), which are responsible for dilating afferent arterioles to maintain renal blood flow and glomerular filtration rate (GFR). In patients with compromised renal function, this blockage leads to severe vasoconstriction and acute renal ischemia.",
+      "effects": "Acute Kidney Injury (AKI), fluid retention, peripheral edema, worsening of hypertension, and severe hyperkalemia.",
+      "clinical_management": "Avoid all NSAIDs in patients with moderate to severe chronic kidney disease (eGFR < 60 mL/min/1.73m²). If pain control is required, utilize alternative agents and monitor serum creatinine and potassium closely.",
+      "alternatives": "Acetaminophen (paracetamol) is generally safe for short-term mild-to-moderate pain. For chronic severe pain, consult for non-NSAID options such as Tramadol under close renal function monitoring."
+    },
+    {
+      "drug": "ibuprofen",
+      "disease": "peptic ulcer disease",
+      "severity": "CRITICAL",
+      "mechanism": "Ibuprofen is a non-selective COX inhibitor. COX-1 inhibition blocks the synthesis of mucosal prostaglandins that maintain gastric mucosal blood flow, stimulate bicarbonate and mucus secretion, and limit acid secretion. Its absence leaves the gastric mucosa highly vulnerable to acid-peptic digestion.",
+      "effects": "Exacerbation of gastric or duodenal ulcers, severe gastrointestinal mucosal bleeding, anemia, and life-threatening gastrointestinal perforation.",
+      "clinical_management": "Contraindicated in patients with active peptic ulcer disease or history of GI bleed. If NSAIDs are essential, combine with a proton pump inhibitor (PPI) like Omeprazole, or switch to a selective COX-2 inhibitor like Celecoxib with caution.",
+      "alternatives": "Acetaminophen for pain, or topical NSAID preparations (e.g., Diclofenac gel) which have significantly lower systemic absorption and GI risk."
+    },
+    {
+      "drug": "propranolol",
+      "disease": "asthma",
+      "severity": "CRITICAL",
+      "mechanism": "Propranolol is a non-selective beta-blocker that antagonizes both beta-1 (cardiac) and beta-2 (bronchial) adrenergic receptors. Antagonizing beta-2 receptors in the lungs blocks the bronchodilatory effects of circulating epinephrine and prevents rescue inhalers (like Albuterol, a beta-2 agonist) from binding and relieving airway spasms.",
+      "effects": "Severe, sudden bronchoconstriction, severe wheezing, and potentially fatal acute asthma attacks.",
+      "clinical_management": "Contraindicated in patients with asthma, COPD, or reactive airway diseases. If a beta-blocker is clinically necessary (e.g., post-myocardial infarction), a highly selective beta-1 blocker (cardioselective) such as Metoprolol or Bisoprolol must be used at the lowest possible dose, under strict clinical observation.",
+      "alternatives": "For hypertension or arrhythmia, use Calcium Channel Blockers (e.g., Amlodipine, Diltiazem) or Angiotensin II Receptor Blockers (ARBs like Losartan) which do not affect bronchial smooth muscle."
+    },
+    {
+      "drug": "metformin",
+      "disease": "renal impairment",
+      "severity": "CRITICAL",
+      "mechanism": "Metformin is cleared solely via renal glomerular filtration and active tubular secretion. In moderate to severe renal impairment, clearance is reduced, leading to drug accumulation. High levels of metformin inhibit mitochondrial respiratory chain complex I, shifting metabolism to anaerobic glycolysis and increasing lactate production.",
+      "effects": "Metformin-Associated Lactic Acidosis (MALA), a rare but highly fatal metabolic emergency presenting with malaise, respiratory distress (Kussmaul breathing), abdominal pain, hypotension, and profound acidosis.",
+      "clinical_management": "Absolutely contraindicated in patients with severe renal impairment (eGFR < 30 mL/min/1.73m²). For patients with eGFR between 30-45 mL/min, reduce metformin dose by 50% and do not initiate new therapy. Monitor GFR at least every 3-6 months.",
+      "alternatives": "Insulin, DPP-4 inhibitors (e.g., Linagliptin, which does not require renal adjustment), or SGLT2 inhibitors at adjusted doses depending on GFR."
+    },
+    {
+      "drug": "pseudoephedrine",
+      "disease": "hypertension",
+      "severity": "WARNING",
+      "mechanism": "Pseudoephedrine is a sympathomimetic amine that stimulates alpha-adrenergic receptors on vascular smooth muscle, causing vasoconstriction, and beta-adrenergic receptors, causing cardiac stimulation (increased heart rate and contractility).",
+      "effects": "Elevation in systemic blood pressure, tachycardia, palpitations, and increased risk of stroke or myocardial infarction in patients with uncontrolled hypertension.",
+      "clinical_management": "Avoid pseudoephedrine and other systemic decongestants in patients with moderate, severe, or uncontrolled hypertension. Instruct patients to check over-the-counter cough/cold labels. Use non-pharmacological treatments or nasal sprays for brief periods.",
+      "alternatives": "For congestion, use topical nasal sprays (e.g., Oxymetazoline) for a maximum of 3-5 days to avoid rebound congestion (rhinitis medicamentosa), saline nasal rinses, or oral antihistamines if allergy-related."
+    },
+    {
+      "drug": "acetaminophen",
+      "disease": "liver impairment",
+      "severity": "WARNING",
+      "mechanism": "Acetaminophen is primarily metabolized in the liver via glucuronidation and sulfation. A small portion is metabolized by CYP2E1 into a highly reactive toxic metabolite, NAPQI. NAPQI is normally detoxified by binding to glutathione. In liver impairment, glutathione stores are depleted, leading to unbound NAPQI binding to hepatic proteins and causing cellular necrosis.",
+      "effects": "Severe acute hepatotoxicity, worsening of hepatic encephalopathy, and acute liver failure.",
+      "clinical_management": "Use with caution in patients with active liver disease or chronic alcohol abuse. Limit maximum daily dose to 2.0g (normally 4.0g in healthy adults) and avoid long-term consecutive use. Monitor liver function tests (AST, ALT, Bilirubin).",
+      "alternatives": "For mild pain, use very low doses of acetaminophen or consider local/topical non-NSAID therapies depending on other co-morbidities."
+    }
+  ]
+}
