@@ -2,6 +2,12 @@
    CLINIQUEAGENT AI — PIPELINE COORDINATOR LOGIC
    ========================================================================== */
 
+// Configure the backend API URL. If running locally, default to relative paths.
+// Otherwise, point to the deployed backend URL on Render.
+const API_BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? ""
+    : "https://clinique-agent-ai.onrender.com";
+
 document.addEventListener("DOMContentLoaded", () => {
     // DOM Elements
     const queryInput = document.getElementById("query-input");
@@ -184,7 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
      */
     async function checkSystemStatus() {
         try {
-            const res = await fetch("/api/status");
+            const res = await fetch(`${API_BASE}/api/status`);
             const data = await res.json();
             
             // Format status badge
@@ -265,7 +271,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 allergies: patientProfile.allergies || null
             };
             
-            const response = await fetch("/api/check", {
+            const response = await fetch(`${API_BASE}/api/check`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
