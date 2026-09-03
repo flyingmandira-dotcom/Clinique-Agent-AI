@@ -2,12 +2,12 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
 class CheckRequest(BaseModel):
-    query: str = Field(..., description="The user's query containing drugs and health conditions.")
-    drugs: Optional[List[str]] = Field(None, description="Optional pre-extracted list of drugs.")
-    conditions: Optional[List[str]] = Field(None, description="Optional pre-extracted list of conditions.")
-    target_illness: Optional[str] = Field(None, description="The illness or symptom the patient is trying to treat.")
-    medical_history: Optional[str] = Field(None, description="The patient's medical history / previous diagnoses.")
-    allergies: Optional[str] = Field(None, description="The patient's known drug or environmental allergies.")
+    query: str = Field(..., max_length=1000, description="The user's query containing drugs and health conditions.")
+    drugs: Optional[List[str]] = Field(None, max_length=50, description="Optional pre-extracted list of drugs.")
+    conditions: Optional[List[str]] = Field(None, max_length=50, description="Optional pre-extracted list of conditions.")
+    target_illness: Optional[str] = Field(None, max_length=200, description="The illness or symptom the patient is trying to treat.")
+    medical_history: Optional[str] = Field(None, max_length=500, description="The patient's medical history / previous diagnoses.")
+    allergies: Optional[str] = Field(None, max_length=500, description="The patient's known drug or environmental allergies.")
 
 class AgentStepResult(BaseModel):
     agent_name: str
@@ -15,21 +15,22 @@ class AgentStepResult(BaseModel):
     status: str = "success"
     input_data: Any
     output_data: Any
-    logs: List[str]
+    logs: List[str] = Field(default_factory=list)
 
 class ClinicalReport(BaseModel):
-    severity: str = Field(..., description="Overall interaction severity: CRITICAL, WARNING, or SAFE")
-    summary: str = Field(..., description="High-level summary of the interactions found.")
-    interactions_details: List[Dict[str, Any]] = Field(..., description="Detailed clinical breakdown of each interaction.")
-    disease_warnings: List[Dict[str, Any]] = Field(..., description="Breakdown of drug-disease contraindications.")
-    metabolism_interactions: List[Dict[str, Any]] = Field(..., description="Pharmacokinetic CYP450 interactions.")
-    recommendations: List[str] = Field(..., description="Clinical action items and safe alternatives.")
-    suggested_alternatives: List[Dict[str, Any]] = Field(default=[], description="Suggested safer drug alternatives with fewer or no interaction risks.")
-    citations: List[str] = Field(..., description="Source citations/references.")
+    severity: str = Field(default="SAFE", description="Overall interaction severity: CRITICAL, WARNING, SAFE, UNVERIFIED, or NO_DRUGS_DETECTED")
+    summary: str = Field(default="", description="High-level summary of the interactions found.")
+    interactions_details: List[Dict[str, Any]] = Field(default_factory=list, description="Detailed clinical breakdown of each interaction.")
+    disease_warnings: List[Dict[str, Any]] = Field(default_factory=list, description="Breakdown of drug-disease contraindications.")
+    metabolism_interactions: List[Dict[str, Any]] = Field(default_factory=list, description="Pharmacokinetic CYP450 interactions.")
+    recommendations: List[str] = Field(default_factory=list, description="Clinical action items and safe alternatives.")
+    suggested_alternatives: List[Dict[str, Any]] = Field(default_factory=list, description="Suggested safer drug alternatives with fewer or no interaction risks.")
+    citations: List[str] = Field(default_factory=list, description="Source citations/references.")
+    engine_mode: str = Field(default="simulation", description="Engine mode used: e.g. live_ai:gemini, live_ai:groq, fallback_static, or simulation.")
 
 class CheckResponse(BaseModel):
-    drugs: List[str]
-    conditions: List[str]
+    drugs: List[str] = Field(default_factory=list)
+    conditions: List[str] = Field(default_factory=list)
     severity: str
     report: ClinicalReport
-    pipeline_steps: List[AgentStepResult]
+    pipeline_steps: List[AgentStepResult] = Field(default_factory=list)

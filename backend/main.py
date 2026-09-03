@@ -21,29 +21,35 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS Policy configuration
+# CORS Policy configuration (fix CORS wildcard credentials)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 @app.get("/api/status")
 async def get_status():
-    """Returns whether live GenAI/Gemini mode is configured and active."""
+    """Returns whether live GenAI mode is configured and active, along with available providers."""
     ai_active = llm.is_ai_active()
+    providers = llm.get_available_providers()
     return {
         "engine_mode": "live_ai" if ai_active else "simulation",
-        "gemini_api_key_configured": llm._is_gemini_active,
+        "providers_available": providers,
+        "gemini_api_key_configured": "gemini" in providers,
+        "groq_api_key_configured": "groq" in providers,
+        "openrouter_api_key_configured": "openrouter" in providers,
         "app_mode_config": os.getenv("APP_MODE", "auto")
     }
 
 @app.post("/api/check", response_model=CheckResponse)
 async def check_interactions(request: CheckRequest):
     """Executes the complete 6-agent clinical checker pipeline."""
-    logger.info(f"Received interaction check request: query='{request.query}'")
+    # Fix: Truncate and sanitize query for logging to prevent sensitive PHI leakage
+    query_preview = (request.query[:60] + "...") if len(request.query) > 60 else request.query
+    logger.info(f"Received interaction check request (length: {len(request.query)}, query_preview='{query_preview}')")
     pipeline_steps: List[AgentStepResult] = []
     
     try:
@@ -62,24 +68,40 @@ async def check_interactions(request: CheckRequest):
         
         extracted = agent1_res.output_data
         drugs = extracted.get("drugs", [])
-        conditions = extracted.get("conditions", [])
+        
+        # Fix: Merge target_illness and medical_history into conditions list before downstream use
+        conditions = list(extracted.get("conditions", []))
+        target_illness = extracted.get("target_illness") or request.target_illness
+        medical_history = extracted.get("medical_history") or request.medical_history
+        allergies = extracted.get("allergies") or request.allergies
+
+        if target_illness and target_illness.strip():
+            t_clean = target_illness.strip().lower()
+            if t_clean not in [c.lower() for c in conditions]:
+                conditions.append(t_clean)
+                
+        if medical_history and medical_history.strip():
+            m_clean = medical_history.strip().lower()
+            if m_clean not in [c.lower() for c in conditions]:
+                conditions.append(m_clean)
         
         if not drugs:
-            # Return a generic "safe" clinical report if no drugs could be extracted at all
+            # Fix: Return distinct "NO_DRUGS_DETECTED" status instead of false "SAFE"
             empty_report = ClinicalReport(
-                severity="SAFE",
+                severity="NO_DRUGS_DETECTED",
                 summary="No active pharmaceutical agents or generic medications were detected in the query. Please input drug names to perform a check.",
                 interactions_details=[],
                 disease_warnings=[],
                 metabolism_interactions=[],
                 recommendations=[output_agent.STANDARD_DISCLAIMER],
                 suggested_alternatives=[],
-                citations=[]
+                citations=[],
+                engine_mode="simulation" if not llm.is_ai_active() else "fallback_static"
             )
             return CheckResponse(
                 drugs=[],
-                conditions=[],
-                severity="SAFE",
+                conditions=conditions,
+                severity="NO_DRUGS_DETECTED",
                 report=empty_report,
                 pipeline_steps=pipeline_steps
             )
@@ -89,9 +111,9 @@ async def check_interactions(request: CheckRequest):
         agent2_res = retrieval_agent.run(
             drugs, 
             conditions,
-            target_illness=extracted.get("target_illness") or request.target_illness,
-            medical_history=extracted.get("medical_history") or request.medical_history,
-            allergies=extracted.get("allergies") or request.allergies
+            target_illness=target_illness,
+            medical_history=medical_history,
+            allergies=allergies
         )
         agent2_res.logs.append(f"Agent 2 Execution Time: {round(time.time() - t0, 3)}s")
         pipeline_steps.append(agent2_res)
@@ -111,9 +133,9 @@ async def check_interactions(request: CheckRequest):
             conditions, 
             severity_data, 
             retrieval_data,
-            target_illness=extracted.get("target_illness") or request.target_illness,
-            medical_history=extracted.get("medical_history") or request.medical_history,
-            allergies=extracted.get("allergies") or request.allergies
+            target_illness=target_illness,
+            medical_history=medical_history,
+            allergies=allergies
         )
         agent4_res.logs.append(f"Agent 4 Execution Time: {round(time.time() - t0, 3)}s")
         pipeline_steps.append(agent4_res)
@@ -150,9 +172,10 @@ async def check_interactions(request: CheckRequest):
         
     except Exception as e:
         logger.error(f"Error executing agent pipeline: {e}", exc_info=True)
+        # Fix: Do not leak internal exception details to client
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred in the multi-agent clinical pipeline: {str(e)}"
+            detail="An error occurred in the multi-agent clinical pipeline. Please try again later."
         )
 
 # Mount the static files directory at the root to serve the frontend dashboard

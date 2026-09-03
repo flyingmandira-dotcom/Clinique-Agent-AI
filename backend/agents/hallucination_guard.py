@@ -25,7 +25,7 @@ def run(generated_report: Dict[str, Any], retrieval_data: Dict[str, Any]) -> Age
     
     if is_ai_active():
         try:
-            logs.append("Contacting Gemini to audit statements for grounding against retrieved sources...")
+            logs.append("Contacting LLM provider chain to audit statements for grounding against retrieved sources...")
             system_instruction = (
                 "You are the Hallucination Guard Agent in a clinical drug interaction pipeline. "
                 "Your job is to strictly fact-check the generated clinical report against the "
@@ -40,7 +40,7 @@ def run(generated_report: Dict[str, Any], retrieval_data: Dict[str, Any]) -> Age
                 f"Source Retrieved Context Data:\n{json.dumps(retrieval_data, indent=2)}"
             )
             
-            response_text = call_llm(prompt, system_instruction, response_schema=HallucinationGuardSchema)
+            response_text, provider = call_llm(prompt, system_instruction, response_schema=HallucinationGuardSchema)
             parsed = json.loads(response_text)
             
             is_safe = parsed.get("is_safe", True)
@@ -48,7 +48,7 @@ def run(generated_report: Dict[str, Any], retrieval_data: Dict[str, Any]) -> Age
             detected_unsupported_claims = parsed.get("detected_unsupported_claims", [])
             justification = parsed.get("justification", justification)
             
-            logs.append(f"[Audit Complete] Grounding Score: {grounding_score * 100}%. Safe: {is_safe}")
+            logs.append(f"[Audit Complete via {provider.upper()}] Grounding Score: {grounding_score * 100}%. Safe: {is_safe}")
             if detected_unsupported_claims:
                 logs.append(f"[WARNING] Detected {len(detected_unsupported_claims)} unsupported claims in the generated report!")
                 for claim in detected_unsupported_claims:
@@ -57,7 +57,7 @@ def run(generated_report: Dict[str, Any], retrieval_data: Dict[str, Any]) -> Age
                 logs.append("No ungrounded statements or clinical hallucinations were detected.")
                 
         except Exception as e:
-            logs.append(f"[Error] Gemini audit failed: {str(e)}. Defaulting to safe local guidelines.")
+            logs.append(f"[Fallback] LLM audit failed: {str(e)}. Defaulting to safe local guidelines.")
     else:
         logs.append("Local rule validator verified 100% compliance with clinical source databases.")
         logs.append(f"Grounding Score: 100%. Safe: {is_safe}")

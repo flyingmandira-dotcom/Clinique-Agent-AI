@@ -196,8 +196,11 @@ document.addEventListener("DOMContentLoaded", () => {
             // Format status badge
             engineStatusBadge.className = `engine-badge ${data.engine_mode}`;
             if (data.engine_mode === "live_ai") {
-                engineStatusText.textContent = "Live Gemini AI Active";
-                addConsoleLine("SYS", "Connected to Google Gemini Engine. Live clinical-grade generation active.", "success-line");
+                const providers = (data.providers_available && data.providers_available.length > 0) 
+                    ? data.providers_available.map(p => p.toUpperCase()).join(" / ") 
+                    : "ACTIVE";
+                engineStatusText.textContent = `Live AI Active (${providers})`;
+                addConsoleLine("SYS", `Connected to Live LLM Engine (${providers}). Live clinical-grade generation active.`, "success-line");
             } else {
                 engineStatusText.textContent = "Offline Simulation Mode";
                 addConsoleLine("SYS", "Running in offline Simulation mode. Preloaded clinical local databases are active.", "warning-line");
@@ -382,10 +385,24 @@ document.addEventListener("DOMContentLoaded", () => {
             reportPatientContextBar.classList.add("hidden");
         }
         
-        // 2. Setup severity badge
+        // 2. Setup severity badge and dynamic engine mode badge
         const sev = data.severity.toLowerCase();
         reportSeverity.className = `severity-badge-large ${sev}`;
-        reportSeverity.textContent = data.severity;
+        reportSeverity.textContent = data.severity.replace(/_/g, " ");
+        
+        if (report.engine_mode) {
+            if (report.engine_mode.startsWith("live_ai")) {
+                const prov = report.engine_mode.split(":")[1] || "AI";
+                engineStatusBadge.className = "engine-badge live_ai";
+                engineStatusText.textContent = `Live AI (${prov.toUpperCase()})`;
+            } else if (report.engine_mode === "fallback_static") {
+                engineStatusBadge.className = "engine-badge fallback_static";
+                engineStatusText.textContent = "Fallback Static";
+            } else {
+                engineStatusBadge.className = "engine-badge simulation";
+                engineStatusText.textContent = "Simulation Mode";
+            }
+        }
         
         // 3. Setup summary
         reportSummaryText.textContent = report.summary;

@@ -38,6 +38,9 @@ def run(guard_data: Dict[str, Any]) -> AgentStepResult:
         citations = ["FDA Center for Drug Evaluation and Research Data", "CYP450 Enzyme Clearance Consensus Databases"]
     report["citations"] = citations
     
+    # Ensure engine mode is populated
+    report["engine_mode"] = report.get("engine_mode", "simulation")
+    
     logs.append("Output Agent final compilation succeeded.")
     
     return AgentStepResult(

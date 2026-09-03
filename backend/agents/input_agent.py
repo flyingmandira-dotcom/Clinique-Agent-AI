@@ -206,7 +206,7 @@ def run(query: str, pre_extracted_drugs: List[str] = None, pre_extracted_conditi
         
     if is_ai_active():
         try:
-            logs.append("Contacting Gemini for semantic extraction...")
+            logs.append("Contacting LLM provider chain for semantic extraction...")
             system_instruction = (
                 "You are the Input Agent in a clinical drug interaction pipeline. "
                 "Analyze the user query, patient medical history, and allergies to extract all drug names, "
@@ -220,7 +220,7 @@ def run(query: str, pre_extracted_drugs: List[str] = None, pre_extracted_conditi
             hist_str = medical_history or "None reported"
             algs_str = allergies or "None reported"
             prompt = f"User query: '{query}'\nPatient Medical History: '{hist_str}'\nPatient Allergies: '{algs_str}'"
-            response_text = call_llm(prompt, system_instruction, response_schema=InputAgentSchema)
+            response_text, provider = call_llm(prompt, system_instruction, response_schema=InputAgentSchema)
             parsed = json.loads(response_text)
             
             drugs = [d.lower() for d in parsed.get("drugs", [])]
@@ -230,7 +230,7 @@ def run(query: str, pre_extracted_drugs: List[str] = None, pre_extracted_conditi
             normalized_algs_list = parsed.get("normalized_allergies", [])
             normalized_algs = ", ".join(normalized_algs_list) if (normalized_algs_list is not None) else allergies
             
-            logs.append("[Success] Gemini extracted entities successfully.")
+            logs.append(f"[Success] {provider.upper()} extracted entities successfully.")
             logs.append(f"Extracted Drugs: {drugs}")
             logs.append(f"Extracted Conditions: {conditions}")
             logs.append(f"Inferred Intent: {intent}")
@@ -238,7 +238,7 @@ def run(query: str, pre_extracted_drugs: List[str] = None, pre_extracted_conditi
                 logs.append(f"Normalized Allergies: {normalized_algs_list}")
             
         except Exception as e:
-            logs.append(f"[Error] Gemini extraction failed: {str(e)}. Falling back to simulation.")
+            logs.append(f"[Fallback] LLM extraction failed: {str(e)}. Falling back to simulation parser.")
             sim_drugs, sim_conditions, sim_algs, sim_intent, sim_logs = run_simulation(query, medical_history, allergies)
             drugs = sim_drugs
             conditions = sim_conditions

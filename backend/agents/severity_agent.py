@@ -86,7 +86,7 @@ def run(retrieval_data: Dict[str, Any]) -> AgentStepResult:
     
     if is_ai_active():
         try:
-            logs.append("Contacting Gemini for clinical risk scoring and reasoning...")
+            logs.append("Contacting LLM provider chain for clinical risk scoring and reasoning...")
             system_instruction = (
                 "You are the Severity Agent in a clinical drug interaction pipeline. "
                 "Analyze the retrieved interaction chunks and assign an overall severity score: "
@@ -95,23 +95,23 @@ def run(retrieval_data: Dict[str, Any]) -> AgentStepResult:
             )
             prompt = f"Retrieved Context Data:\n{json.dumps(retrieval_data, indent=2)}"
             
-            response_text = call_llm(prompt, system_instruction, response_schema=SeverityAssessmentSchema)
+            response_text, provider = call_llm(prompt, system_instruction, response_schema=SeverityAssessmentSchema)
             parsed = json.loads(response_text)
             
             # Ensure safety constraint: if deterministic checks found CRITICAL, enforce CRITICAL
             ai_severity = parsed.get("overall_severity", "SAFE").upper()
             if det_overall == "CRITICAL" and ai_severity != "CRITICAL":
-                logs.append("[Override] Gemini evaluated severity lower than local clinical rules. Overriding to 'CRITICAL' for safety.")
+                logs.append(f"[Override] {provider.upper()} evaluated severity lower than local clinical rules. Overriding to 'CRITICAL' for safety.")
                 overall_severity = "CRITICAL"
             else:
                 overall_severity = ai_severity
                 
             reasoning = parsed.get("reasoning", det_reason)
             item_assessments = parsed.get("item_assessments", det_items)
-            logs.append(f"[Success] Gemini completed risk scoring. Severity: {overall_severity}")
+            logs.append(f"[Success] {provider.upper()} completed risk scoring. Severity: {overall_severity}")
             
         except Exception as e:
-            logs.append(f"[Error] Gemini scoring failed: {str(e)}. Defaulting to clinical rule processor.")
+            logs.append(f"[Fallback] LLM scoring failed: {str(e)}. Defaulting to clinical rule processor.")
             logs.append(f"Fallback Severity: {overall_severity}")
     else:
         logs.append("Executing clinical rule engine...")

@@ -834,6 +834,27 @@ textarea#query-input::placeholder {
     box-shadow: 0 4px 12px rgba(239, 35, 60, 0.15);
 }
 
+.severity-badge-large.no_drugs_detected,
+.severity-badge-large.unverified {
+    background: #f8fafc;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+    border-bottom: 3px solid #94a3b8;
+    max-width: 180px;
+    font-size: 12px;
+}
+
+.engine-badge.fallback_static {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #b45309;
+}
+
+.engine-badge.fallback_static .status-dot {
+    background-color: #f59e0b;
+    box-shadow: 0 0 8px #f59e0b;
+}
+
 /* REPORT WORKSPACE LAYOUT */
 .report-grid {
     display: grid;

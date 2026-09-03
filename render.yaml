@@ -11,3 +11,9 @@ services:
       - key: GEMINI_API_KEY
         sync: false
         placeholder: "Enter your Google Gemini API Key"
+      - key: GROQ_API_KEY
+        sync: false
+        placeholder: "Enter your Groq API Key (optional fallback)"
+      - key: OPENROUTER_API_KEY
+        sync: false
+        placeholder: "Enter your OpenRouter API Key (optional fallback)"

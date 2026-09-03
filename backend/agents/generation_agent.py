@@ -19,11 +19,14 @@ def generate_simulation_report(drugs: List[str], conditions: List[str], severity
     dis_int = retrieval_data.get("disease_contraindications", [])
     met_int = retrieval_data.get("metabolism_interactions", [])
     
-    # 1. Build Summary
+    # 1. Build Summary - Ensure no empty () is rendered when conditions is empty
+    drugs_str = f"drugs ({', '.join([d.capitalize() for d in drugs])})" if drugs else "the evaluated medications"
+    cond_clause = f" or medical conditions ({', '.join([c.capitalize() for c in conditions])})" if conditions else ""
+    
     if severity == "CRITICAL":
-        summary_parts.append(f"CRITICAL RISK DETECTED: The requested combination of drugs ({', '.join([d.capitalize() for d in drugs])}) or medical conditions ({', '.join([c.capitalize() for c in conditions])}) presents high-risk clinical dangers.")
+        summary_parts.append(f"CRITICAL RISK DETECTED: The requested combination of {drugs_str}{cond_clause} presents high-risk clinical dangers.")
     elif severity == "WARNING":
-        summary_parts.append(f"WARNING: Moderate risk detected. Spacing of doses, monitoring of vital signs, or minor therapy adjustments are recommended for {', '.join([d.capitalize() for d in drugs])}.")
+        summary_parts.append(f"WARNING: Moderate risk detected. Spacing of doses, monitoring of vital signs, or minor therapy adjustments are recommended for {', '.join([d.capitalize() for d in drugs]) if drugs else 'the evaluated medications'}.")
     else:
         summary_parts.append("SAFE: No high-risk or moderate-risk interaction pathways were located in the current databases. The combination appears safe under standard adult dosing guidelines.")
         
@@ -148,7 +151,8 @@ def generate_simulation_report(drugs: List[str], conditions: List[str], severity
         "metabolism_interactions": metabolisms,
         "recommendations": recommendations,
         "suggested_alternatives": suggested_alternatives,
-        "citations": citations
+        "citations": citations,
+        "engine_mode": "simulation"
     }
  
 def run(drugs: List[str], conditions: List[str], severity_data: Dict[str, Any], retrieval_data: Dict[str, Any],
@@ -160,12 +164,11 @@ def run(drugs: List[str], conditions: List[str], severity_data: Dict[str, Any], 
     
     # Generate baseline/simulation report
     sim_report = generate_simulation_report(drugs, conditions, severity, retrieval_data, target_illness, medical_history, allergies)
-    
     output_report = sim_report
     
     if is_ai_active():
         try:
-            logs.append("Contacting Gemini to synthesize clinical advisory report...")
+            logs.append("Contacting LLM provider chain to synthesize clinical advisory report...")
             system_instruction = (
                 "You are the Generation Agent in a clinical drug interaction pipeline. "
                 "Synthesize a highly professional, scientifically rigorous clinical advisory report. "
@@ -180,7 +183,7 @@ def run(drugs: List[str], conditions: List[str], severity_data: Dict[str, Any], 
             
             prompt = (
                 f"Drugs: {drugs}\n"
-                f"Conditions: {conditions}\n"
+                f"Conditions: {conditions or 'None reported'}\n"
                 f"Severity: {severity}\n"
                 f"Patient Profile Context:\n"
                 f"  - Target Illness to Treat: {target_illness or 'Not specified'}\n"
@@ -189,17 +192,21 @@ def run(drugs: List[str], conditions: List[str], severity_data: Dict[str, Any], 
                 f"Retrieved Database context chunks:\n{json.dumps(retrieval_data, indent=2)}"
             )
             
-            response_text = call_llm(prompt, system_instruction, response_schema=ClinicalReport)
+            response_text, provider = call_llm(prompt, system_instruction, response_schema=ClinicalReport)
             parsed = json.loads(response_text)
             
-            # Populate response
+            # Populate response and record active engine mode
             output_report = parsed
-            logs.append("[Success] Gemini generated a highly descriptive, clinical-grade advisory note.")
+            output_report["engine_mode"] = f"live_ai:{provider}"
+            logs.append(f"[Success] {provider.upper()} generated a highly descriptive, clinical-grade advisory note.")
             
         except Exception as e:
-            logs.append(f"[Error] Gemini synthesis failed: {str(e)}. Falling back to deterministic structured template.")
+            output_report = sim_report
+            output_report["engine_mode"] = "fallback_static"
+            logs.append(f"[Fallback] LLM provider failover exhausted ({str(e)}). Fell back to deterministic structured template.")
     else:
-        logs.append("Assembled report using pre-validated clinical databases.")
+        output_report["engine_mode"] = "simulation"
+        logs.append("Assembled report using pre-validated clinical databases in offline simulation mode.")
         
     return AgentStepResult(
         agent_name="Generation Agent",
