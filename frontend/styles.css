@@ -1408,3 +1408,134 @@ textarea#query-input::placeholder {
     border-bottom: none;
     padding-bottom: 0;
 }
+
+/* ==========================================================================
+   MULTI-DIMENSIONAL ASSESSMENT & SEVERITY TIERS
+   ========================================================================== */
+
+.assessment-dimensions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin: 20px 0 24px 0;
+}
+
+@media (max-width: 768px) {
+    .assessment-dimensions-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.dimension-card {
+    background: #ffffff;
+    border: 1px solid #fed7dd;
+    border-bottom: 3px solid #fecdd3;
+    border-radius: 16px;
+    padding: 18px 20px;
+    transition: var(--transition-smooth);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dimension-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(255, 117, 143, 0.08);
+}
+
+.dimension-card.advisory-card {
+    background: linear-gradient(135deg, #fffcfd 0%, #fff5f7 100%);
+    border-color: #fbcfe8;
+    border-bottom-color: #f472b6;
+    grid-column: span 2;
+}
+
+@media (max-width: 768px) {
+    .dimension-card.advisory-card {
+        grid-column: span 1;
+    }
+}
+
+.dimension-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dimension-icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.dimension-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.dimension-p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+
+/* STANDARDIZED SEVERITY BADGES */
+.severity-badge-large {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 18px;
+    border-radius: 24px;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    transition: var(--transition-smooth);
+}
+
+.severity-badge-large.high_risk,
+.severity-badge-large.critical {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #991b1b;
+    border: 1.5px solid #ef4444;
+    box-shadow: 0 2px 10px rgba(239, 68, 68, 0.2);
+}
+
+.severity-badge-large.moderate_risk,
+.severity-badge-large.warning {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border: 1.5px solid #f59e0b;
+    box-shadow: 0 2px 10px rgba(245, 158, 11, 0.2);
+}
+
+.severity-badge-large.low_risk {
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    color: #0369a1;
+    border: 1.5px solid #38bdf8;
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.2);
+}
+
+.severity-badge-large.review_required {
+    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    color: #5b21b6;
+    border: 1.5px solid #8b5cf6;
+    box-shadow: 0 2px 10px rgba(139, 92, 246, 0.2);
+}
+
+.severity-badge-large.safe {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    color: #166534;
+    border: 1.5px solid #22c55e;
+    box-shadow: 0 2px 10px rgba(34, 197, 94, 0.2);
+}
+
+.severity-badge-large.no_drugs_detected {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1.5px solid #cbd5e1;
+}
+

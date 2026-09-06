@@ -4,6 +4,7 @@ from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 from backend.schemas import AgentStepResult
 from backend.agents.llm import call_llm, is_ai_active
+from backend.agents.severity_agent import normalize_severity
 
 logger = logging.getLogger("drug_checker.agents.hallucination_guard")
 
@@ -14,50 +15,81 @@ class HallucinationGuardSchema(BaseModel):
     justification: str = Field(description="A brief explanation of the fact-checking process and findings.")
 
 def run(generated_report: Dict[str, Any], retrieval_data: Dict[str, Any]) -> AgentStepResult:
-    """Executes the Hallucination Guard Agent (Agent 5) to fact-check the generated report."""
-    logs = ["Initiating fact-checking review on generated clinical report..."]
+    """Executes the Hallucination Guard Agent (Agent 5) to audit claims and enforce safety guardrails."""
+    logs = ["Initiating fact-checking and clinical safety audit on generated report..."]
     
-    # Baseline: Default is safe because local template reports are pre-grounded
     is_safe = True
     grounding_score = 1.0
-    detected_unsupported_claims = []
-    justification = "All clinical claims are fully grounded in local medical database entries."
+    detected_unsupported_claims: List[str] = []
+    justification = "All clinical claims verified against reference sources. No unsupported statements detected."
     
+    # 1. Deterministic Safety Check: Never allow "SAFE" if clinical concerns exist
+    current_sev = normalize_severity(generated_report.get("severity", "REVIEW_REQUIRED"))
+    dis_int = retrieval_data.get("disease_contraindications", [])
+    fda_int = retrieval_data.get("fda_interactions", [])
+    met_int = retrieval_data.get("metabolism_interactions", [])
+    
+    has_concerns = bool(dis_int or fda_int or met_int)
+    
+    if current_sev == "SAFE" and has_concerns:
+        is_safe = False
+        grounding_score = 0.6
+        claim = "False Reassurance Violation: Report concluded 'SAFE' despite active clinical contraindications/interactions."
+        detected_unsupported_claims.append(claim)
+        justification = "Violation of Critical Safety Rule: Regimen was classified as SAFE despite detected clinical risks."
+        # Enforce downgrade to conservative risk tier
+        generated_report["severity"] = "HIGH_RISK" if (dis_int or any(i.get('severity') == 'CRITICAL' for i in fda_int)) else "MODERATE_RISK"
+        logs.append(f"[SAFETY OVERRIDE] Overrode false 'SAFE' to '{generated_report['severity']}' due to active database concerns.")
+
     if is_ai_active():
         try:
             logs.append("Contacting LLM provider chain to audit statements for grounding against retrieved sources...")
             system_instruction = (
-                "You are the Hallucination Guard Agent in a clinical drug interaction pipeline. "
-                "Your job is to strictly fact-check the generated clinical report against the "
-                "raw database context chunks retrieved. Assess if any mechanisms, side effects, "
-                "or clinical management claims in the report lack support in the source data. "
-                "Output a safety boolean, a grounding score, and a list of unsupported claims (if any). "
+                "You are the Hallucination Guard Agent in a clinical drug safety pipeline.\n"
+                "Strictly fact-check the generated clinical report against the raw retrieved database context.\n"
+                "CRITICAL SAFETY CHECK:\n"
+                "- Verify that no medication is falsely claimed as 'SAFE' when contraindications, precautions, or allergies exist.\n"
+                "- Flag any invented or hallucinated interactions, non-existent contraindications, or unverified dosage rules.\n"
+                "- Verify that absence of evidence is not stated as definitive proof of safety.\n"
+                "Output a safety boolean, grounding score (0.0 to 1.0), and a list of unsupported claims (if any).\n"
                 "Return JSON matching the schema."
             )
             
             prompt = (
-                f"Generated Clinical Report:\n{json.dumps(generated_report, indent=2)}\n\n"
+                f"Generated Clinical Report to Audit:\n{json.dumps(generated_report, indent=2)}\n\n"
                 f"Source Retrieved Context Data:\n{json.dumps(retrieval_data, indent=2)}"
             )
             
             response_text, provider = call_llm(prompt, system_instruction, response_schema=HallucinationGuardSchema)
+            if provider in ("simulation", "simulation_fallback") or not response_text:
+                raise RuntimeError(f"Switched to offline fallback ({provider})")
             parsed = json.loads(response_text)
             
-            is_safe = parsed.get("is_safe", True)
-            grounding_score = parsed.get("grounding_score", 1.0)
-            detected_unsupported_claims = parsed.get("detected_unsupported_claims", [])
-            justification = parsed.get("justification", justification)
+            ai_is_safe = parsed.get("is_safe", True)
+            ai_score = parsed.get("grounding_score", 1.0)
+            ai_claims = parsed.get("detected_unsupported_claims", [])
+            
+            if not ai_is_safe or ai_claims:
+                is_safe = False
+                grounding_score = min(grounding_score, ai_score)
+                detected_unsupported_claims.extend(ai_claims)
+                justification = parsed.get("justification", justification)
+                
+                # If unsupported claims exist, prevent false SAFE
+                if generated_report.get("severity") == "SAFE":
+                    generated_report["severity"] = "REVIEW_REQUIRED"
+                    logs.append("[Grounding Adjustment] Downgraded severity from SAFE to REVIEW_REQUIRED due to ungrounded claims.")
             
             logs.append(f"[Audit Complete via {provider.upper()}] Grounding Score: {grounding_score * 100}%. Safe: {is_safe}")
             if detected_unsupported_claims:
-                logs.append(f"[WARNING] Detected {len(detected_unsupported_claims)} unsupported claims in the generated report!")
+                logs.append(f"[WARNING] Detected {len(detected_unsupported_claims)} unsupported claims in generated report!")
                 for claim in detected_unsupported_claims:
                     logs.append(f"  - Unsupported Claim: '{claim}'")
             else:
                 logs.append("No ungrounded statements or clinical hallucinations were detected.")
                 
         except Exception as e:
-            logs.append(f"[Fallback] LLM audit failed: {str(e)}. Defaulting to safe local guidelines.")
+            logs.append(f"[Fallback] LLM audit failed: {str(e)}. Defaulting to safe deterministic guidelines.")
     else:
         logs.append("Local rule validator verified 100% compliance with clinical source databases.")
         logs.append(f"Grounding Score: 100%. Safe: {is_safe}")
@@ -72,7 +104,7 @@ def run(generated_report: Dict[str, Any], retrieval_data: Dict[str, Any]) -> Age
     
     return AgentStepResult(
         agent_name="Hallucination Guard",
-        description="Audits and fact-checks generated clinical claims against retrieved context sources.",
+        description="Audits clinical claims against source context to prevent hallucinations and false reassurance.",
         input_data={"generated_report": generated_report},
         output_data=output_data,
         logs=logs

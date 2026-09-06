@@ -53,6 +53,33 @@
       "effects": "Severe acute hepatotoxicity, worsening of hepatic encephalopathy, and acute liver failure.",
       "clinical_management": "Use with caution in patients with active liver disease or chronic alcohol abuse. Limit maximum daily dose to 2.0g (normally 4.0g in healthy adults) and avoid long-term consecutive use. Monitor liver function tests (AST, ALT, Bilirubin).",
       "alternatives": "For mild pain, use very low doses of acetaminophen or consider local/topical non-NSAID therapies depending on other co-morbidities."
+    },
+    {
+      "drug": "simvastatin",
+      "disease": "liver impairment",
+      "severity": "CRITICAL",
+      "mechanism": "Simvastatin undergoes extensive first-pass hepatic metabolism. In patients with active liver disease or unexplained persistent elevations of hepatic transaminases, hepatic clearance is substantially impaired, leading to excessive systemic exposure, severe hepatotoxicity, and markedly increased risk of rhabdomyolysis.",
+      "effects": "Exacerbation of hepatic dysfunction, elevated transaminases (AST/ALT), acute liver injury, and potential life-threatening rhabdomyolysis.",
+      "clinical_management": "Contraindicated in patients with active liver disease or persistent elevations of transaminases. Perform liver function tests prior to initiating therapy and monitor periodically. Consider non-statin lipid lowering therapy or hydrophilic statins (e.g. Pravastatin) with expert consultation.",
+      "alternatives": "Pravastatin (less dependent on hepatic CYP3A4 clearance), Bile acid sequestrants, or PCSK9 inhibitors under specialist supervision."
+    },
+    {
+      "drug": "atorvastatin",
+      "disease": "liver impairment",
+      "severity": "CRITICAL",
+      "mechanism": "Atorvastatin is extensively metabolized by the liver. Impaired hepatic function leads to marked drug accumulation and elevated serum concentrations, increasing risks of hepatotoxicity and myopathy.",
+      "effects": "Persistent transaminase elevation, acute hepatic necrosis, muscle toxicity, and rhabdomyolysis.",
+      "clinical_management": "Contraindicated in active liver disease. Use lowest effective dose in patients with compensated chronic liver disease and monitor LFTs closely.",
+      "alternatives": "Pravastatin or non-hepatic cleared lipid therapies under specialist evaluation."
+    },
+    {
+      "drug": "warfarin",
+      "disease": "renal impairment",
+      "severity": "WARNING",
+      "mechanism": "Renal impairment compromises anticoagulant elimination pathways, alters protein binding, and increases bleeding tendency due to uremic platelet dysfunction. Warfarin also carries risk of Warfarin-Related Nephropathy (WRN).",
+      "effects": "Excessive anticoagulation (high INR), spontaneous bleeding episodes, hematuria, and accelerated decline in renal function.",
+      "clinical_management": "Maintain frequent INR monitoring. Reduce target maintenance doses and evaluate bleeding risk scores carefully. Avoid concurrent NSAIDs.",
+      "alternatives": "Dose-adjusted direct oral anticoagulants (DOACs) where approved for specific GFR thresholds, or specialist hematology co-management."
     }
   ]
 }

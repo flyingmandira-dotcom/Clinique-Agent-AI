@@ -286,9 +286,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const data = await response.json();
             
-            // Intercept if severity is high-risk (WARNING or CRITICAL) and we haven't asked for target illness / allergies
-            if ((data.severity === "CRITICAL" || data.severity === "WARNING") && !patientProfile.illness) {
-                addConsoleLine("SYS", "High clinical risk flagged! safety screening required to tailor alternative recommendations.", "warning-line");
+            // Intercept if severity is high-risk (HIGH_RISK, MODERATE_RISK, CRITICAL, or WARNING) and we haven't asked for target illness / allergies
+            if ((data.severity === "HIGH_RISK" || data.severity === "MODERATE_RISK" || data.severity === "CRITICAL" || data.severity === "WARNING") && !patientProfile.illness) {
+                addConsoleLine("SYS", "High clinical risk flagged! Safety screening required to tailor alternative recommendations.", "warning-line");
                 pendingDiagnosticQuery = query;
                 
                 // Prefill history with any conditions extracted by Agent 1 if available
@@ -337,7 +337,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     cssClass = "warning-line";
                 } else if (log.includes("[Success]") || log.includes("succeeded")) {
                     cssClass = "success-line";
-                } else if (log.includes("[WARNING]") || log.includes("Caution")) {
+                } else if (log.includes("[WARNING]") || log.includes("Caution") || log.includes("[SAFETY OVERRIDE]")) {
                     cssClass = "warning-line";
                 } else if (log.includes("[Error]") || log.includes("failed")) {
                     cssClass = "error-line";
@@ -367,8 +367,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const report = data.report;
         
         // 1. Setup metadata
-        reportDrugs.textContent = data.drugs.length > 0 ? data.drugs.join(", ") : "None";
-        reportConditions.textContent = data.conditions.length > 0 ? data.conditions.join(", ") : "None";
+        reportDrugs.textContent = data.drugs && data.drugs.length > 0 ? data.drugs.join(", ") : "None";
+        reportConditions.textContent = data.conditions && data.conditions.length > 0 ? data.conditions.join(", ") : "None";
+        
+        const reportAllergiesMetric = document.getElementById("report-allergies-metric");
+        const algsStr = (data.allergies && data.allergies.length > 0)
+            ? data.allergies.join(", ")
+            : (patientProfile.allergies || "None reported");
+        if (reportAllergiesMetric) {
+            reportAllergiesMetric.textContent = algsStr;
+        }
         
         // 1b. Setup patient clinical profile context display associated with this report
         const reportPatientContextBar = document.getElementById("report-patient-context-bar");
@@ -386,8 +394,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         // 2. Setup severity badge and dynamic engine mode badge
-        const sev = data.severity.toLowerCase();
-        reportSeverity.className = `severity-badge-large ${sev}`;
+        const sevKey = (data.severity || "SAFE").toLowerCase();
+        reportSeverity.className = `severity-badge-large ${sevKey}`;
         reportSeverity.textContent = data.severity.replace(/_/g, " ");
         
         if (report.engine_mode) {
@@ -404,6 +412,17 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
         
+        // 2b. Populate separated multi-dimensional assessment cards
+        const reportDdi = document.getElementById("report-ddi-assessment");
+        const reportCond = document.getElementById("report-condition-assessment");
+        const reportCyp = document.getElementById("report-cyp-assessment");
+        const reportAdvisory = document.getElementById("report-advisory-assessment");
+
+        if (reportDdi) reportDdi.textContent = report.ddi_assessment || "No drug–drug interactions evaluated.";
+        if (reportCond) reportCond.textContent = report.drug_condition_assessment || "No drug–condition contraindications reported.";
+        if (reportCyp) reportCyp.textContent = report.cyp450_assessment || "No CYP450 metabolism conflicts evaluated.";
+        if (reportAdvisory) reportAdvisory.textContent = report.clinical_advisory || report.summary || "Clinician review recommended.";
+
         // 3. Setup summary
         reportSummaryText.textContent = report.summary;
         

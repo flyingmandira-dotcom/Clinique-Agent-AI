@@ -244,6 +244,10 @@
                         <div id="report-conditions" class="metric-value">None</div>
                     </div>
                     <div class="summary-metric">
+                        <span class="metric-label">Allergies Checked</span>
+                        <div id="report-allergies-metric" class="metric-value">None reported</div>
+                    </div>
+                    <div class="summary-metric">
                         <span class="metric-label">Assessed Severity</span>
                         <div id="report-severity" class="severity-badge-large safe">SAFE</div>
                     </div>
@@ -256,6 +260,38 @@
                     <span id="report-patient-history" class="context-val">History: None</span>
                     <span class="context-divider">|</span>
                     <span id="report-patient-allergies" class="context-val">Allergies: None</span>
+                </div>
+
+                <!-- SEPARATED MULTI-DIMENSIONAL ASSESSMENT GRID -->
+                <div class="assessment-dimensions-grid">
+                    <div class="dimension-card glass-panel">
+                        <div class="dimension-header">
+                            <span class="dimension-icon">💊</span>
+                            <h4>Drug–Drug Interaction Assessment</h4>
+                        </div>
+                        <p id="report-ddi-assessment" class="dimension-p">No interactions evaluated.</p>
+                    </div>
+                    <div class="dimension-card glass-panel">
+                        <div class="dimension-header">
+                            <span class="dimension-icon">⚠️</span>
+                            <h4>Drug–Condition / Contraindication Assessment</h4>
+                        </div>
+                        <p id="report-condition-assessment" class="dimension-p">No condition concerns evaluated.</p>
+                    </div>
+                    <div class="dimension-card glass-panel">
+                        <div class="dimension-header">
+                            <span class="dimension-icon">🧬</span>
+                            <h4>CYP450 Metabolism Assessment</h4>
+                        </div>
+                        <p id="report-cyp-assessment" class="dimension-p">No CYP450 conflicts evaluated.</p>
+                    </div>
+                    <div class="dimension-card glass-panel advisory-card">
+                        <div class="dimension-header">
+                            <span class="dimension-icon">📋</span>
+                            <h4>Clinical Advisory & Guidance</h4>
+                        </div>
+                        <p id="report-advisory-assessment" class="dimension-p">Consult healthcare professional.</p>
+                    </div>
                 </div>
 
                 <div class="report-grid">

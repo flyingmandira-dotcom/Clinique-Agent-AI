@@ -40,7 +40,9 @@ async def get_status():
         "providers_available": providers,
         "gemini_api_key_configured": "gemini" in providers,
         "groq_api_key_configured": "groq" in providers,
+        "grok_api_key_configured": "grok" in providers,
         "openrouter_api_key_configured": "openrouter" in providers,
+        "primary_provider": os.getenv("PRIMARY_PROVIDER", "auto"),
         "app_mode_config": os.getenv("APP_MODE", "auto")
     }
 
@@ -98,9 +100,11 @@ async def check_interactions(request: CheckRequest):
                 citations=[],
                 engine_mode="simulation" if not llm.is_ai_active() else "fallback_static"
             )
+            parsed_algs = [a.strip() for a in (allergies or "").split(",") if a.strip() and a.strip().lower() not in ("none", "none reported")]
             return CheckResponse(
                 drugs=[],
                 conditions=conditions,
+                allergies=parsed_algs,
                 severity="NO_DRUGS_DETECTED",
                 report=empty_report,
                 pipeline_steps=pipeline_steps
@@ -121,7 +125,12 @@ async def check_interactions(request: CheckRequest):
         
         # ---- STEP 3: SEVERITY AGENT ----
         t0 = time.time()
-        agent3_res = severity_agent.run(retrieval_data)
+        agent3_res = severity_agent.run(
+            retrieval_data,
+            drugs=drugs,
+            conditions=conditions,
+            allergies=allergies
+        )
         agent3_res.logs.append(f"Agent 3 Execution Time: {round(time.time() - t0, 3)}s")
         pipeline_steps.append(agent3_res)
         severity_data = agent3_res.output_data
@@ -162,9 +171,12 @@ async def check_interactions(request: CheckRequest):
         
         logger.info(f"Pipeline completed. Overall Severity: {severity}. Steps count: {len(pipeline_steps)}")
         
+        parsed_algs = [a.strip() for a in (allergies or "").split(",") if a.strip() and a.strip().lower() not in ("none", "none reported")]
+        
         return CheckResponse(
             drugs=drugs,
             conditions=conditions,
+            allergies=parsed_algs,
             severity=severity,
             report=clinical_report,
             pipeline_steps=pipeline_steps

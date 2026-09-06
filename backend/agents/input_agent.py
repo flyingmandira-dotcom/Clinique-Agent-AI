@@ -221,6 +221,8 @@ def run(query: str, pre_extracted_drugs: List[str] = None, pre_extracted_conditi
             algs_str = allergies or "None reported"
             prompt = f"User query: '{query}'\nPatient Medical History: '{hist_str}'\nPatient Allergies: '{algs_str}'"
             response_text, provider = call_llm(prompt, system_instruction, response_schema=InputAgentSchema)
+            if provider in ("simulation", "simulation_fallback") or not response_text:
+                raise RuntimeError(f"Switched to offline fallback ({provider})")
             parsed = json.loads(response_text)
             
             drugs = [d.lower() for d in parsed.get("drugs", [])]

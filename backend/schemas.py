@@ -18,19 +18,32 @@ class AgentStepResult(BaseModel):
     logs: List[str] = Field(default_factory=list)
 
 class ClinicalReport(BaseModel):
-    severity: str = Field(default="SAFE", description="Overall interaction severity: CRITICAL, WARNING, SAFE, UNVERIFIED, or NO_DRUGS_DETECTED")
+    severity: str = Field(
+        default="SAFE", 
+        description="Overall interaction severity: HIGH_RISK, MODERATE_RISK, LOW_RISK, SAFE, or REVIEW_REQUIRED."
+    )
     summary: str = Field(default="", description="High-level summary of the interactions found.")
-    interactions_details: List[Dict[str, Any]] = Field(default_factory=list, description="Detailed clinical breakdown of each interaction.")
-    disease_warnings: List[Dict[str, Any]] = Field(default_factory=list, description="Breakdown of drug-disease contraindications.")
-    metabolism_interactions: List[Dict[str, Any]] = Field(default_factory=list, description="Pharmacokinetic CYP450 interactions.")
+    
+    # Separated assessment dimensions
+    allergies_checked: List[str] = Field(default_factory=list, description="Patient allergies audited during assessment.")
+    ddi_assessment: str = Field(default="", description="Dedicated assessment of drug-drug interactions.")
+    drug_condition_assessment: str = Field(default="", description="Dedicated assessment of drug-condition contraindications and precautions.")
+    cyp450_assessment: str = Field(default="", description="Dedicated assessment of CYP450 pharmacokinetic and metabolic pathways.")
+    clinical_advisory: str = Field(default="", description="Comprehensive clinical advisory note and guidance.")
+    
+    # Detailed structured item lists
+    interactions_details: List[Any] = Field(default_factory=list, description="Detailed clinical breakdown of each interaction.")
+    disease_warnings: List[Any] = Field(default_factory=list, description="Breakdown of drug-disease contraindications.")
+    metabolism_interactions: List[Any] = Field(default_factory=list, description="Pharmacokinetic CYP450 interactions.")
     recommendations: List[str] = Field(default_factory=list, description="Clinical action items and safe alternatives.")
-    suggested_alternatives: List[Dict[str, Any]] = Field(default_factory=list, description="Suggested safer drug alternatives with fewer or no interaction risks.")
+    suggested_alternatives: List[Any] = Field(default_factory=list, description="Suggested safer drug alternatives with fewer or no interaction risks.")
     citations: List[str] = Field(default_factory=list, description="Source citations/references.")
-    engine_mode: str = Field(default="simulation", description="Engine mode used: e.g. live_ai:gemini, live_ai:groq, fallback_static, or simulation.")
+    engine_mode: str = Field(default="simulation", description="Engine mode used: e.g. live_ai:groq, live_ai:gemini, fallback_static, or simulation.")
 
 class CheckResponse(BaseModel):
     drugs: List[str] = Field(default_factory=list)
     conditions: List[str] = Field(default_factory=list)
+    allergies: List[str] = Field(default_factory=list)
     severity: str
     report: ClinicalReport
     pipeline_steps: List[AgentStepResult] = Field(default_factory=list)
