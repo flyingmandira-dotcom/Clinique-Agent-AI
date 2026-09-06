@@ -43,21 +43,24 @@ def run(generated_report: Dict[str, Any], retrieval_data: Dict[str, Any]) -> Age
 
     if is_ai_active():
         try:
-            logs.append("Contacting LLM provider chain to audit statements for grounding against retrieved sources...")
+            logs.append("Contacting LLM provider chain to audit statements for grounding against retrieved sources (CALL 2)...")
             system_instruction = (
                 "You are the Hallucination Guard Agent in a clinical drug safety pipeline.\n"
-                "Strictly fact-check the generated clinical report against the raw retrieved database context.\n"
-                "CRITICAL SAFETY CHECK:\n"
-                "- Verify that no medication is falsely claimed as 'SAFE' when contraindications, precautions, or allergies exist.\n"
-                "- Flag any invented or hallucinated interactions, non-existent contraindications, or unverified dosage rules.\n"
-                "- Verify that absence of evidence is not stated as definitive proof of safety.\n"
-                "Output a safety boolean, grounding score (0.0 to 1.0), and a list of unsupported claims (if any).\n"
+                "Audit the generated clinical report against the supplied retrieved database context.\n"
+                "Do NOT independently re-derive the entire clinical assessment; audit the report statements for grounding.\n\n"
+                "AUDIT CHECKLIST:\n"
+                "1. Verify claims, interactions, and CYP450 pathways are supported by retrieved evidence.\n"
+                "2. Verify no medication is claimed 'SAFE' when contraindications, precautions, or active risks exist.\n"
+                "3. Flag any invented interactions, fabricated contraindications, or unverified dosage rules.\n"
+                "4. Check that citations correspond to available reference context.\n"
+                "5. Verify absence of evidence is not stated as definitive proof of safety.\n"
+                "Output a safety boolean, grounding score (0.0 to 1.0), and detected unsupported claims.\n"
                 "Return JSON matching the schema."
             )
             
             prompt = (
-                f"Generated Clinical Report to Audit:\n{json.dumps(generated_report, indent=2)}\n\n"
-                f"Source Retrieved Context Data:\n{json.dumps(retrieval_data, indent=2)}"
+                f"Generated Clinical Report to Audit:\n{json.dumps(generated_report, separators=(',', ':'))}\n\n"
+                f"Source Retrieved Context Data:\n{json.dumps(retrieval_data, separators=(',', ':'))}"
             )
             
             response_text, provider = call_llm(prompt, system_instruction, response_schema=HallucinationGuardSchema)

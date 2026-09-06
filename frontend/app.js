@@ -366,9 +366,15 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderClinicalReport(data) {
         const report = data.report;
         
-        // 1. Setup metadata
-        reportDrugs.textContent = data.drugs && data.drugs.length > 0 ? data.drugs.join(", ") : "None";
+        // 1. Setup metadata (including RxNorm recognition status)
+        if (data.drugs_unrecognized && data.drugs_unrecognized.length > 0) {
+            const unrecNames = data.drugs_unrecognized.map(u => u.original_mention || u.name).join(", ");
+            reportDrugs.innerHTML = `${data.drugs && data.drugs.length > 0 ? data.drugs.join(", ") : "None"} <span style="color: #f59e0b; font-size: 0.85em; font-weight: 600; display: block; margin-top: 4px;">⚠️ Unrecognized by RxNorm: ${unrecNames} (DATA UNAVAILABLE)</span>`;
+        } else {
+            reportDrugs.textContent = data.drugs && data.drugs.length > 0 ? data.drugs.join(", ") : "None";
+        }
         reportConditions.textContent = data.conditions && data.conditions.length > 0 ? data.conditions.join(", ") : "None";
+
         
         const reportAllergiesMetric = document.getElementById("report-allergies-metric");
         const algsStr = (data.allergies && data.allergies.length > 0)

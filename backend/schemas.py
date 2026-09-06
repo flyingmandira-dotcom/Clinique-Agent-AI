@@ -37,7 +37,9 @@ class ClinicalReport(BaseModel):
     metabolism_interactions: List[Any] = Field(default_factory=list, description="Pharmacokinetic CYP450 interactions.")
     recommendations: List[str] = Field(default_factory=list, description="Clinical action items and safe alternatives.")
     suggested_alternatives: List[Any] = Field(default_factory=list, description="Suggested safer drug alternatives with fewer or no interaction risks.")
-    citations: List[str] = Field(default_factory=list, description="Source citations/references.")
+    # RxNorm normalization tracking
+    drugs_recognized: List[Dict[str, Any]] = Field(default_factory=list, description="Drugs recognized by RxNorm with RxCUI.")
+    drugs_unrecognized: List[Dict[str, Any]] = Field(default_factory=list, description="Drugs unrecognized by RxNorm requiring manual review.")
     engine_mode: str = Field(default="simulation", description="Engine mode used: e.g. live_ai:groq, live_ai:gemini, fallback_static, or simulation.")
 
 class CheckResponse(BaseModel):
@@ -47,3 +49,6 @@ class CheckResponse(BaseModel):
     severity: str
     report: ClinicalReport
     pipeline_steps: List[AgentStepResult] = Field(default_factory=list)
+    drugs_recognized: List[Dict[str, Any]] = Field(default_factory=list, description="List of recognized drugs with RxCUI.")
+    drugs_unrecognized: List[Dict[str, Any]] = Field(default_factory=list, description="List of unrecognized drugs flagged with reasons.")
+

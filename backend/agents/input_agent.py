@@ -81,194 +81,172 @@ KNOWN_CONDITIONS = {
     "infection": "active infection"
 }
 
+import re
+from backend.agents.clinique_rxnorm import RxNormClient, DrugRecognized, DrugUnrecognized
+
+_rxnorm_client = RxNormClient()
+
+DRUG_EXTRACTION_PATTERN = re.compile(
+    r'\b(?:on|taking|prescribed|started|stopped|allergic to|allergy to)\s+([a-zA-Z0-9\s,\-]+?)(?:\.|,|;|$|\band\b)',
+    re.IGNORECASE
+)
+
+
 class InputAgentSchema(BaseModel):
     drugs: List[str] = Field(description="List of drug names extracted from the query, in lowercase.")
     conditions: List[str] = Field(description="List of medical conditions extracted from both the query and the history, normalized in lowercase.")
     intent: str = Field(description="The user's primary goal, e.g. checking drug interactions, safety, dosage or general information.")
-    normalized_allergies: Optional[List[str]] = Field(default=None, description="List of drug names the patient is allergic to, extracted from allergies and normalized to generic names in lowercase.")
+    normalized_allergies: Optional[List[str]] = Field(default=None, description="List of drug names the patient is allergic to, normalized in lowercase.")
 
-def run_simulation(query: str, medical_history: str = None, allergies: str = None) -> Tuple[List[str], List[str], str, str, List[str]]:
-    """Rule-based parser for query text, returning (drugs, conditions, normalized_allergies, intent, logs)."""
-    logs = ["Running Input Agent in Simulation Mode..."]
-    normalized_query = query.lower()
+
+def extract_candidate_drug_mentions(query: str) -> List[str]:
+    """Extracts candidate medication mentions from natural language query or structured text."""
+    mentions: List[str] = []
     
-    # Extract drugs (checking generic names first, then brand names)
-    extracted_drugs = []
+    # 1. Regex pattern matches (e.g. "on aspirin", "taking Eliquis")
+    matches = DRUG_EXTRACTION_PATTERN.findall(query)
+    for match in matches:
+        for part in match.split(","):
+            cleaned = part.strip()
+            if cleaned and len(cleaned.split()) <= 3:
+                mentions.append(cleaned)
+                
+    # 2. Check keyword lists or section prefixes
+    lower_q = query.lower()
+    if "medications:" in lower_q or "drugs:" in lower_q:
+        idx = lower_q.find("medications:") if "medications:" in lower_q else lower_q.find("drugs:")
+        after = query[idx:].split(":", 1)[-1].split("\n")[0]
+        for part in after.split(","):
+            cleaned = part.strip()
+            if cleaned:
+                mentions.append(cleaned)
+
+    # 3. Check known database drugs & brand names
     for drug in KNOWN_DRUGS:
-        if drug in normalized_query and drug not in extracted_drugs:
-            extracted_drugs.append(drug)
-            logs.append(f"Detected drug matching keyword: '{drug}'")
-            
-    for brand, generic in BRAND_TO_GENERIC.items():
-        if brand in normalized_query and generic not in extracted_drugs:
-            extracted_drugs.append(generic)
-            logs.append(f"Detected brand drug '{brand}' -> normalized to generic '{generic}'")
-            
-    # Extract conditions from both query and medical history
-    extracted_conditions = []
-    combined_context = normalized_query
+        if re.search(rf'\b{re.escape(drug)}\b', lower_q):
+            mentions.append(drug)
+    for brand in BRAND_TO_GENERIC.keys():
+        if re.search(rf'\b{re.escape(brand)}\b', lower_q):
+            mentions.append(brand)
+
+    # 4. If query is a comma or 'and' separated list of terms, parse tokens
+    tokens = [t.strip() for t in re.split(r'[,;]|\band\b', query) if t.strip()]
+    for t in tokens:
+        # Ignore common condition words or filler words
+        t_clean = t.lower().strip()
+        words = t_clean.split()
+        if len(words) <= 3 and t_clean not in KNOWN_CONDITIONS and t_clean not in ("safe", "safety", "dose", "dosage", "check", "patient", "none"):
+            mentions.append(t)
+
+    # Deduplicate while preserving order
+    unique_mentions: List[str] = []
+    for m in mentions:
+        m_strip = m.strip()
+        if m_strip and not any(m_strip.lower() == u.lower() for u in unique_mentions):
+            unique_mentions.append(m_strip)
+
+    return unique_mentions
+
+
+def run(
+    query: str,
+    pre_extracted_drugs: Optional[List[str]] = None,
+    pre_extracted_conditions: Optional[List[str]] = None,
+    target_illness: Optional[str] = None,
+    medical_history: Optional[str] = None,
+    allergies: Optional[str] = None
+) -> AgentStepResult:
+    """
+    Executes the Input Agent (Agent 1) with live RxNorm normalization:
+    1. Extracts drug candidates from text or pre-extracted list.
+    2. Normalizes candidates via RxNormClient.
+    3. Separates into drugs_recognized and drugs_unrecognized.
+    4. Extracts conditions from query and medical history.
+    5. Normalizes allergy mentions.
+    """
+    logs: List[str] = ["Initializing Input Agent with RxNorm drug normalization..."]
+    intent = "interaction_check"
+    conditions = list(pre_extracted_conditions or [])
+
+    # 1. Gather Candidate Drug Mentions
+    if pre_extracted_drugs:
+        logs.append(f"Using pre-extracted drug mentions: {pre_extracted_drugs}")
+        candidates = list(pre_extracted_drugs)
+    else:
+        candidates = extract_candidate_drug_mentions(query)
+        logs.append(f"Extracted candidate drug mentions from query: {candidates}")
+
+    # 2. Normalize via RxNorm Client
+    recognized_models, unrecognized_models = _rxnorm_client.normalize_drug_list(candidates)
+    
+    drugs_recognized = [r.to_dict() for r in recognized_models]
+    drugs_unrecognized = [u.to_dict() for u in unrecognized_models]
+
+    for rec in recognized_models:
+        logs.append(f"[RxNorm Match] '{rec.name}' -> {rec.preferred_name} (RxCUI: {rec.rxcui}, match: {rec.match_type})")
+    for unrec in unrecognized_models:
+        logs.append(f"[RxNorm Unrecognized] ⚠ '{unrec.name}': {unrec.reason}")
+
+    # Active drugs list for pipeline: use preferred normalized names for recognized + original for unrecognized
+    drugs = [r.preferred_name for r in recognized_models]
+    for u in unrecognized_models:
+        if u.name.lower() not in [d.lower() for d in drugs]:
+            drugs.append(u.name.lower())
+
+    # 3. Extract Conditions from Query and Medical History
+    lower_context = query.lower()
     if medical_history:
-        combined_context += " " + medical_history.lower()
-        
+        lower_context += " " + medical_history.lower()
+
     for term, norm_cond in KNOWN_CONDITIONS.items():
-        if term in combined_context and norm_cond not in extracted_conditions:
-            extracted_conditions.append(norm_cond)
-            logs.append(f"Detected condition matching keyword '{term}' -> normalized to '{norm_cond}'")
-            
-    # Normalize allergies
+        if term in lower_context and norm_cond not in conditions:
+            conditions.append(norm_cond)
+            logs.append(f"Detected condition '{term}' -> normalized to '{norm_cond}'")
+
+    # 4. Normalize Allergies
     normalized_algs_list = []
     if allergies:
-        alg_terms = [a.strip().lower() for a in allergies.split(",") if a.strip()]
-        for alg in alg_terms:
-            norm_alg = BRAND_TO_GENERIC.get(alg, alg)
-            normalized_algs_list.append(norm_alg)
-            if norm_alg != alg:
-                logs.append(f"Normalized allergy drug '{alg}' -> generic '{norm_alg}'")
-                
+        alg_terms = [a.strip() for a in allergies.split(",") if a.strip()]
+        for a in alg_terms:
+            a_rec, _ = _rxnorm_client.normalize_drug(a)
+            if a_rec:
+                normalized_algs_list.append(a_rec.preferred_name)
+            else:
+                normalized_algs_list.append(BRAND_TO_GENERIC.get(a.lower(), a.lower()))
     normalized_algs = ", ".join(normalized_algs_list) if normalized_algs_list else allergies
 
-    # Infer intent
-    intent = "interaction_check"
-    if "dose" in normalized_query or "dosage" in normalized_query:
+    # 5. Infer Intent
+    lower_q = query.lower()
+    if "dose" in lower_q or "dosage" in lower_q:
         intent = "dosage_check"
-        logs.append("Inferred intent: Dosage Check based on query keywords.")
-    elif "safe" in normalized_query or "safety" in normalized_query:
+    elif "safe" in lower_q or "safety" in lower_q:
         intent = "safety_evaluation"
-        logs.append("Inferred intent: Safety Evaluation based on query keywords.")
-    else:
-        logs.append("Inferred intent: Drug Interaction Check (Default).")
-        
-    if not extracted_drugs:
-        logs.append("[WARNING] No known drugs detected in the user query.")
-    if not extracted_conditions:
-        logs.append("No medical conditions detected in the user query or profile.")
-        
-    return extracted_drugs, extracted_conditions, normalized_algs, intent, logs
 
-def run(query: str, pre_extracted_drugs: List[str] = None, pre_extracted_conditions: List[str] = None,
-        target_illness: str = None, medical_history: str = None, allergies: str = None) -> AgentStepResult:
-    """Executes the Input Agent (Agent 1) to parse user query and patient profile."""
-    logs = []
-    drugs = pre_extracted_drugs or []
-    conditions = pre_extracted_conditions or []
-    intent = "interaction_check"
-    normalized_algs = allergies
-    
-    # If parameters were already supplied, we can short-circuit or supplement
-    if drugs or conditions:
-        logs.append("Pre-extracted inputs supplied by user. Skipping full textual extraction.")
-        drugs = [d.lower().strip() for d in drugs]
-        # Normalize brand names in pre-extracted drugs
-        drugs = [BRAND_TO_GENERIC.get(d, d) for d in drugs]
-        
-        conditions = [c.lower().strip() for c in conditions]
-        # Normalize conditions
-        normalized_conds = []
-        for c in conditions:
-            # check synonyms
-            matched = False
-            for term, norm in KNOWN_CONDITIONS.items():
-                if term == c:
-                    normalized_conds.append(norm)
-                    matched = True
-                    break
-            if not matched:
-                normalized_conds.append(c)
-        conditions = list(set(normalized_conds))
-        
-        if allergies:
-            alg_terms = [a.strip().lower() for a in allergies.split(",") if a.strip()]
-            normalized_algs = ", ".join([BRAND_TO_GENERIC.get(a, a) for a in alg_terms])
-            
-        intent = "interaction_check"
-        output_data = {
-            "drugs": drugs,
-            "conditions": conditions,
-            "intent": intent,
-            "target_illness": target_illness,
-            "medical_history": medical_history,
-            "allergies": normalized_algs
-        }
-        return AgentStepResult(
-            agent_name="Input Agent",
-            description="Extracts drug names, conditions, and clinical intent from query.",
-            input_data={
-                "query": query, 
-                "pre_extracted_drugs": pre_extracted_drugs, 
-                "pre_extracted_conditions": pre_extracted_conditions,
-                "target_illness": target_illness,
-                "medical_history": medical_history,
-                "allergies": allergies
-            },
-            output_data=output_data,
-            logs=logs
-        )
-        
-    if is_ai_active():
-        try:
-            logs.append("Contacting LLM provider chain for semantic extraction...")
-            system_instruction = (
-                "You are the Input Agent in a clinical drug interaction pipeline. "
-                "Analyze the user query, patient medical history, and allergies to extract all drug names, "
-                "medical conditions/diseases, and clinical intent. "
-                "Standardize all drug names to their common generic lowercase names (e.g. 'Tylenol' -> 'acetaminophen'). "
-                "Extract all medical conditions from both the query and the medical history, and normalize them to standard clinical terms "
-                "(e.g. mapping kidney issues/CKD/renal failure to 'renal impairment', stomach issues/PUD to 'peptic ulcer disease', "
-                "asthma/COPD to 'asthma', high BP to 'hypertension', cirrhosis/hepatic issues to 'liver impairment'). "
-                "Output JSON matching the specified schema."
-            )
-            hist_str = medical_history or "None reported"
-            algs_str = allergies or "None reported"
-            prompt = f"User query: '{query}'\nPatient Medical History: '{hist_str}'\nPatient Allergies: '{algs_str}'"
-            response_text, provider = call_llm(prompt, system_instruction, response_schema=InputAgentSchema)
-            if provider in ("simulation", "simulation_fallback") or not response_text:
-                raise RuntimeError(f"Switched to offline fallback ({provider})")
-            parsed = json.loads(response_text)
-            
-            drugs = [d.lower() for d in parsed.get("drugs", [])]
-            conditions = [c.lower() for c in parsed.get("conditions", [])]
-            intent = parsed.get("intent", "interaction_check")
-            
-            normalized_algs_list = parsed.get("normalized_allergies", [])
-            normalized_algs = ", ".join(normalized_algs_list) if (normalized_algs_list is not None) else allergies
-            
-            logs.append(f"[Success] {provider.upper()} extracted entities successfully.")
-            logs.append(f"Extracted Drugs: {drugs}")
-            logs.append(f"Extracted Conditions: {conditions}")
-            logs.append(f"Inferred Intent: {intent}")
-            if normalized_algs_list:
-                logs.append(f"Normalized Allergies: {normalized_algs_list}")
-            
-        except Exception as e:
-            logs.append(f"[Fallback] LLM extraction failed: {str(e)}. Falling back to simulation parser.")
-            sim_drugs, sim_conditions, sim_algs, sim_intent, sim_logs = run_simulation(query, medical_history, allergies)
-            drugs = sim_drugs
-            conditions = sim_conditions
-            normalized_algs = sim_algs
-            intent = sim_intent
-            logs.extend(sim_logs)
-    else:
-        sim_drugs, sim_conditions, sim_algs, sim_intent, sim_logs = run_simulation(query, medical_history, allergies)
-        drugs = sim_drugs
-        conditions = sim_conditions
-        normalized_algs = sim_algs
-        intent = sim_intent
-        logs.extend(sim_logs)
-        
+    # Confidence calculation
+    total_mentions = len(drugs_recognized) + len(drugs_unrecognized)
+    confidence = round(len(drugs_recognized) / total_mentions, 2) if total_mentions > 0 else 0.0
+
     output_data = {
         "drugs": drugs,
         "conditions": conditions,
         "intent": intent,
         "target_illness": target_illness,
         "medical_history": medical_history,
-        "allergies": normalized_algs
+        "allergies": normalized_algs,
+        "drugs_recognized": drugs_recognized,
+        "drugs_unrecognized": drugs_unrecognized,
+        "extraction_confidence": confidence
     }
-    
+
+    logs.append(f"Input Agent completed: {len(drugs_recognized)} recognized, {len(drugs_unrecognized)} unrecognized.")
+
     return AgentStepResult(
         agent_name="Input Agent",
-        description="Extracts drug names, conditions, and clinical intent from query and patient profile.",
+        description="Extracts drug mentions, normalizes via RxNorm, and flags unrecognized drugs.",
         input_data={
             "query": query,
+            "pre_extracted_drugs": pre_extracted_drugs,
+            "pre_extracted_conditions": pre_extracted_conditions,
             "target_illness": target_illness,
             "medical_history": medical_history,
             "allergies": allergies
@@ -276,3 +254,4 @@ def run(query: str, pre_extracted_drugs: List[str] = None, pre_extracted_conditi
         output_data=output_data,
         logs=logs
     )
+

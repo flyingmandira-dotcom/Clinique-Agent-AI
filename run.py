@@ -8,7 +8,7 @@ load_dotenv()
 
 def install_dependencies():
     """Ensure all required packages are installed."""
-    required_packages = ["fastapi", "uvicorn", "pydantic", "python-dotenv", "google-generativeai"]
+    required_packages = ["fastapi", "uvicorn", "pydantic", "python-dotenv", "google-generativeai", "requests"]
     missing_packages = []
     
     for package in required_packages:

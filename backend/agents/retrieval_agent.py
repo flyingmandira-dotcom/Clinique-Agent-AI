@@ -20,8 +20,16 @@ def load_json_db(filename: str) -> Dict[str, Any]:
         logger.error(f"Error loading local DB {filename} at {path}: {e}")
         return {}
 
-def run(drugs: List[str], conditions: List[str], target_illness: str = None, medical_history: str = None, allergies: str = None) -> AgentStepResult:
-    """Executes the Retrieval Agent (Agent 2) performing parallel lookups in 3 databases."""
+def run(
+    drugs: List[str],
+    conditions: List[str],
+    target_illness: str = None,
+    medical_history: str = None,
+    allergies: str = None,
+    drugs_recognized: List[Dict[str, Any]] = None,
+    drugs_unrecognized: List[Dict[str, Any]] = None
+) -> AgentStepResult:
+    """Executes the Retrieval Agent (Agent 2) performing parallel lookups in 3 databases and flagging unrecognized drugs."""
     logs = ["Initializing Retrieval Agent..."]
     
     # 0. Incorporate medical history conditions into active checked conditions
@@ -132,9 +140,6 @@ def run(drugs: List[str], conditions: List[str], target_illness: str = None, med
     metabolism_db = load_json_db("metabolism_db.json")
     metabolism_interactions_found = []
     
-    # Find matching metabolism features
-    # A pharmacokinetic interaction occurs if drug A is a substrate of an enzyme, 
-    # and drug B is an inhibitor or inducer of that same enzyme.
     for enzyme in metabolism_db.get("enzymes", []):
         enzyme_name = enzyme["name"]
         substrates = [s.lower() for s in enzyme.get("substrates", [])]
@@ -142,13 +147,11 @@ def run(drugs: List[str], conditions: List[str], target_illness: str = None, med
         inhibitors_mod = [i.lower() for i in enzyme.get("inhibitors", {}).get("moderate", [])]
         inducers = [ind.lower() for ind in enzyme.get("inducers", [])]
         
-        # Check if our drug list contains substrates and modulators of this enzyme
         active_substrates = [d for d in drugs if d in substrates]
         active_inhibitors_strong = [d for d in drugs if d in inhibitors_strong]
         active_inhibitors_mod = [d for d in drugs if d in inhibitors_mod]
         active_inducers = [d for d in drugs if d in inducers]
         
-        # Report interactions
         if active_substrates:
             if active_inhibitors_strong:
                 for sub in active_substrates:
@@ -195,18 +198,37 @@ def run(drugs: List[str], conditions: List[str], target_illness: str = None, med
                             metabolism_interactions_found.append(record)
                             logs.append(f"[METABOLISM MATCH] CYP450 pathway alert. {ind} (inducer) speeds up metabolism of substrate {sub} via {enzyme_name}.")
 
+    # 4. Explicit Flagging for Unrecognized Drugs (DATA_UNAVAILABLE)
+    unrecognized_assessments = []
+    if drugs_unrecognized:
+        for unrec in drugs_unrecognized:
+            uname = unrec.get("name") or unrec.get("original_mention") or str(unrec)
+            ureason = unrec.get("reason", "No match found in RxNorm")
+            unrecognized_assessments.append({
+                "drug_name": uname,
+                "rxcui": "UNKNOWN",
+                "status": "DATA_UNAVAILABLE",
+                "data_availability": "none",
+                "message": f"Drug '{uname}' not recognized in RxNorm ({ureason}). Cannot assess interactions or contraindications. ⚠ REQUIRES MANUAL REVIEW"
+            })
+            logs.append(f"[DATA UNAVAILABLE] ⚠ Unrecognized drug '{uname}' explicitly flagged. Cannot assume safe.")
+
     output_data = {
         "fda_interactions": interactions_found,
         "disease_contraindications": contraindications_found,
-        "metabolism_interactions": metabolism_interactions_found
+        "metabolism_interactions": metabolism_interactions_found,
+        "unrecognized_assessments": unrecognized_assessments,
+        "drugs_recognized": drugs_recognized or [],
+        "drugs_unrecognized": drugs_unrecognized or []
     }
     
-    logs.append(f"Retrieval summary: Found {len(interactions_found)} FDA, {len(contraindications_found)} Disease, and {len(metabolism_interactions_found)} Metabolism conflicts.")
+    logs.append(f"Retrieval summary: Found {len(interactions_found)} FDA, {len(contraindications_found)} Disease, {len(metabolism_interactions_found)} Metabolism, and {len(unrecognized_assessments)} Unrecognized Drug alerts.")
     
     return AgentStepResult(
         agent_name="Retrieval Agent",
-        description="Performs parallel database queries to fetch interaction clinical context.",
+        description="Performs parallel database queries to fetch interaction clinical context and flags unrecognized drugs.",
         input_data={"drugs": drugs, "conditions": conditions},
         output_data=output_data,
         logs=logs
     )
+

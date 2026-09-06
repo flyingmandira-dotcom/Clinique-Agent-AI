@@ -5,8 +5,10 @@ import random
 import socket
 import time
 import hashlib
+import threading
 import urllib.request
 import urllib.error
+from collections import deque
 from typing import Optional, Dict, Any, Type, Tuple, List
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -52,6 +54,38 @@ try:
         logger.info("[-] Gemini API Key not set.")
 except ImportError:
     logger.warning("[-] google-generativeai package not installed.")
+
+
+# ---------------------------------------------------------------------------
+# Global LLM call rate limiter (sliding window)
+# Applies to every real outbound HTTP call to any provider/model, regardless
+# of which agent or retry/failover path triggered it.
+# ---------------------------------------------------------------------------
+_LLM_CALL_LOCK = threading.Lock()
+_RECENT_CALL_TIMESTAMPS: deque = deque()
+MAX_CALLS_PER_WINDOW = 2
+WINDOW_SECONDS = 60.0
+
+
+def _throttle_global_rate_limit() -> None:
+    """Blocks the calling thread until fewer than MAX_CALLS_PER_WINDOW outbound
+    LLM calls have occurred in the trailing WINDOW_SECONDS. Call this as the
+    first line of any function that actually sends a network request to an
+    LLM provider."""
+    while True:
+        with _LLM_CALL_LOCK:
+            now = time.monotonic()
+            while _RECENT_CALL_TIMESTAMPS and now - _RECENT_CALL_TIMESTAMPS[0] >= WINDOW_SECONDS:
+                _RECENT_CALL_TIMESTAMPS.popleft()
+
+            if len(_RECENT_CALL_TIMESTAMPS) < MAX_CALLS_PER_WINDOW:
+                _RECENT_CALL_TIMESTAMPS.append(now)
+                return
+
+            wait = WINDOW_SECONDS - (now - _RECENT_CALL_TIMESTAMPS[0])
+
+        logger.info(f"[Rate Limiter] {MAX_CALLS_PER_WINDOW}/min cap reached. Waiting {wait:.1f}s...")
+        time.sleep(wait)
 
 
 def _get_cache_key(prompt: str, system_instruction: Optional[str] = None) -> str:
@@ -199,6 +233,7 @@ def _call_gemini_raw(
     Calls Google Gemini using JSON output mode and schema instruction injection.
     Avoids Google API 400 schema conversion errors on arbitrary Dict[str, Any] fields.
     """
+    _throttle_global_rate_limit()
     import google.generativeai as genai
     gemini_key = os.getenv("GEMINI_API_KEY", "")
     if not gemini_key or gemini_key == "YOUR_GEMINI_API_KEY_HERE":
@@ -298,6 +333,7 @@ def _call_openai_compatible_endpoint(
     timeout: float = 20.0
 ) -> str:
     """Generic helper for OpenAI-compatible REST endpoints (Groq, OpenRouter)."""
+    _throttle_global_rate_limit()
     messages = []
     sys_content = system_instruction or ""
     
